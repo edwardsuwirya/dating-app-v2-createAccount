@@ -21,10 +21,14 @@ public class CreateAccountAssembly: Assembly{
         container.register(MemberRegistrationUseCase.self){ r in
             MemberRegistrationUseCase(datingMemberRepository: r.resolve(DatingMemberRepositoryProtocol.self,name:"DatingMemberRepo")!)
         }
-        
+        container.register(CreateAccountViewModel.self){ r in
+            let vm = CreateAccountViewModel()
+            vm.memberRegistrationUseCase = r.resolve(MemberRegistrationUseCase.self)!
+            return vm
+        }
         container.register(CreateAccountViewController.self){ r in
             let createAccountVc = CreateAccountViewController(nibName: "CreateAccount", bundle: Bundle.module.self)
-            createAccountVc.memberRegistrationUseCase = r.resolve(MemberRegistrationUseCase.self)
+            createAccountVc.createAccountViewModel = r.resolve(CreateAccountViewModel.self)
             return createAccountVc
         }
     }

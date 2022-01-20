@@ -10,9 +10,12 @@ import BaseNetworkLibrary
 import Moya
 import CoreDataLibrary
 import CoreData
+import RxMoya
+import RxSwift
+import UIKit
 
 protocol DatingMemberRepositoryProtocol{
-    func callRegistrationApi(_ request:MemberRegistrationRequest,completion: @escaping (String?)->())
+    func callRegistrationApi(_ request: MemberRegistrationRequest) -> Observable<String>
 }
 
 struct DatingMemberRepository : DatingMemberRepositoryProtocol{
@@ -24,34 +27,35 @@ struct DatingMemberRepository : DatingMemberRepositoryProtocol{
     }
     
     
-    func callRegistrationApi(_ request: MemberRegistrationRequest, completion: @escaping (String?) -> ()) {
-        guard let ctx = self.dbContext else{
-            completion(nil)
-            return
-        }
-        self.provider!.request(.callRegistration(request)){ result in
-            switch result {
-            case let .success(moyaResponse):
-                do {
-                    let filteredResponse = try moyaResponse.filter(statusCodes: 200...299)
-                    let json = try filteredResponse.map(CommonResponse<MemberRegistrationResponse>.self)
-                    print("xxx=> \(json.data.memberId)")
-                    let memberId = json.data.memberId
-                    
-                    let memberEntity = MemberEntity(context: ctx)
-                    memberEntity.member_id = memberId
-                    memberEntity.is_signin = false
-                    try ctx.save()
-                    completion(memberId)
-                }
-                catch let error {
+    func callRegistrationApi(_ request: MemberRegistrationRequest)->Observable<String>  {
+        
+        return Observable.create{ observer in
+            self.provider!.request(.callRegistration(request)){ result in
+                switch result {
+                case let .success(moyaResponse):
+                    do {
+                        let filteredResponse = try moyaResponse.filter(statusCodes: 200...299)
+                        let json = try filteredResponse.map(CommonResponse<MemberRegistrationResponse>.self)
+                        print("xxx=> \(json.data.memberId)")
+                        print("Dbcontext id Create Account: \(Unmanaged.passUnretained(self.dbContext!).toOpaque())")
+                        let memberId = json.data.memberId
+                        let memberEntity = MemberEntity(context: self.dbContext!)
+                        memberEntity.member_id = memberId
+                        memberEntity.is_signin = false
+                        try self.dbContext!.save()
+                        observer.onNext(memberId)
+                        observer.onCompleted()
+                    }
+                    catch let error {
+                        print("response ===> \(error)")
+                        observer.onError(error)
+                    }
+                case let .failure(error):
                     print("response ===> \(error)")
-                    completion(nil)
+                    observer.onError(error)
                 }
-            case let .failure(error):
-                print("response ===> \(error)")
-                completion(nil)
             }
+            return Disposables.create()
         }
         
     }

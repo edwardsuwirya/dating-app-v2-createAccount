@@ -7,6 +7,7 @@
 
 import Foundation
 import BaseNetworkLibrary
+import RxSwift
 
 struct MemberRegistrationUseCase{
     var datingMemberRepository:DatingMemberRepositoryProtocol!
@@ -15,7 +16,7 @@ struct MemberRegistrationUseCase{
         self.datingMemberRepository = datingMemberRepository
     }
     
-    func call(newMember:MemberRegistrationRequest, callBack: @escaping (String?)->()){
-        datingMemberRepository.callRegistrationApi(newMember, completion : callBack)
+    func call(newMember:MemberRegistrationRequest)-> Observable<String>{
+        return datingMemberRepository.callRegistrationApi(newMember)
     }
 }

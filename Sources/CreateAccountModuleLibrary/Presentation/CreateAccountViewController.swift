@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 import AppViewLibrary
-import BaseNetworkLibrary
+import RxSwift
 import UtilLibrary
 
 public class CreateAccountViewController:UIViewController{
@@ -21,8 +21,8 @@ public class CreateAccountViewController:UIViewController{
     @IBOutlet weak var passowdLabel: UILabel!
     @IBOutlet weak var verificationEmailLabel: UILabel!
     
-    
-    var memberRegistrationUseCase : MemberRegistrationUseCase?
+    var createAccountViewModel: CreateAccountViewModel?
+    let dispose = DisposeBag()
     
     public override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,26 +31,25 @@ public class CreateAccountViewController:UIViewController{
         self.whatEmailLabel.text = Constants.whatEmailLabelTitle.localized
         self.passowdLabel.text = Constants.andPasswordLabelTitle.localized
         self.verificationEmailLabel.text = Constants.verifiedEmailNotifLabelTitle.localized
+        self.createAccountViewModel?.memberPublish
+            .observe(on: MainScheduler.instance)
+            .subscribe{ memberId in
+                if memberId.element == ""{
+                    AppAlert.present(title: "Error", message: "Oops..Something's wrong", from: self)
+                }else{
+                    print("Member ID : \(memberId.element ?? "")")
+                }
+            }
+            .disposed(by: dispose)
     }
     
     @objc func didCreateAccountButtonClick(_ sender: UIButton) {
-        var newMember = BaseNetworkLibrary().memberRegistrationRequestFactory()
-        newMember.email = emailTextField.text ?? ""
-        newMember.password = passwordTextField.text ?? ""
- 
-        if newMember.email == "" || newMember.password == ""{
+        let email = emailTextField.text ?? ""
+        let password = passwordTextField.text ?? ""
+        if email == "" || password == ""{
             AppAlert.present(title: "Error", message: "Please fill the form", from: self)
         }else{
-            memberRegistrationUseCase!.call(newMember: newMember){ (result) in
-                if (result != nil){
-//                    let createProfileSb = UIStoryboard(name: "CreateProfile",bundle: nil)
-//                    let createProfileVc = createProfileSb.instantiateInitialViewController()!
-//                    createProfileVc.modalPresentationStyle = .overCurrentContext
-//                    self.present(createProfileVc,animated: true)
-                }else{
-                    AppAlert.present(title: "Error", message: "Oops..Something's wrong", from: self)
-                }
-            }
+            createAccountViewModel?.doCreateAccount(email: email, password: password)
         }
         
     }
